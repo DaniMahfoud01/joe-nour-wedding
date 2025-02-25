@@ -181,6 +181,66 @@
         .swipe-indicator i {
             font-size: 20px;
         }
+
+        /* -------------------------------------------------------------------------- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 3;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            width: 300px;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        #search-input {
+            width: 90%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #name-list {
+            list-style: none;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #name-list li {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        #name-list li:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* -------------------------------------------------------------------------- */
     </style>
 </head>
 
@@ -269,9 +329,23 @@
                 <button>Confirm Attendance</button>
             </div>
         </div>
+        /* -------------------------------------------------------------------------- */
+
+        <!-- RSVP Modal -->
+        <div id="rsvp-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <h2>Find Your Name</h2>
+                <input type="text" id="search-input" placeholder="Search your name..." oninput="filterNames()" />
+                <ul id="name-list"></ul>
+            </div>
+        </div>
+        /* -------------------------------------------------------------------------- */
+
     </div>
 
     <script>
+        const invitees = ["John Doe", "Jane Smith", "Emily Johnson", "Michael Brown", "Sarah Williams"];
         let currentIndex = 0;
         const slides = document.querySelectorAll(".slide");
         const music = document.getElementById("background-music");
@@ -337,6 +411,65 @@
             }
             isPlaying = !isPlaying;
         }
+        /* -------------------------------------------------------------------------- */
+        // Open the modal when the RSVP button is clicked
+        document.querySelector("#rsvp button").addEventListener("click", openModal);
+
+        function openModal() {
+            document.getElementById("rsvp-modal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("rsvp-modal").style.display = "none";
+            document.getElementById("search-input").value = "";
+            document.getElementById("name-list").style.display = "none"; // Hide list if input is empty
+
+        }
+
+        // Search functionality
+        function filterNames() {
+            let input = document.getElementById("search-input").value.toLowerCase();
+            let nameList = document.getElementById("name-list");
+            nameList.innerHTML = ""; // Clear previous results
+
+            if (input === "") {
+                nameList.style.display = "none"; // Hide list if input is empty
+                return;
+            }
+
+            let filteredNames = invitees.filter(name => name.toLowerCase() === input.toLowerCase());
+
+            if (filteredNames.length > 0) {
+                nameList.style.display = "block";
+                filteredNames.forEach(name => {
+                    let li = document.createElement("li");
+                    li.textContent = name;
+                    li.onclick = () => confirmRSVP(name);
+                    nameList.appendChild(li);
+                });
+            } else {
+                nameList.style.display = "none";
+            }
+        }
+
+        // Confirm RSVP when a name is clicked
+        function confirmRSVP(name) {
+            const rsvpResponse = "Confirmed"; // You can change this to capture actual responses
+
+            fetch("https://script.google.com/macros/s/AKfycbwJs6BmCqvUQLJ9shyT1k3XDR4CqETkRL2fKNmqjGV95gdt77Pb-GVv8gRENFHFCy8/exec", {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name, response: rsvpResponse })
+            })
+
+            alert(`RSVP confirmed for ${name}`);
+
+            closeModal();
+        }
+
+        /* -------------------------------------------------------------------------- */
+
     </script>
 </body>
 
