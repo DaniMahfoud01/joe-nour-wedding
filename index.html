@@ -354,12 +354,8 @@
     <script>
         // Invitees list with max guests allowed
         const invitees = [
-            { name: "John Doe", maxGuests: 0 },
-            { name: "Nour & Joe Mahfoud", maxGuests: 0 },
-            { name: "Jane Smith", maxGuests: 2 },
-            { name: "Emily Johnson", maxGuests: 4 },
-            { name: "Michael Brown", maxGuests: 1 },
-            { name: "Sarah Williams", maxGuests: 5 }
+            { name: "Moussa Family", maxGuests: 3 },
+            { name: "Tannous Family", maxGuests: 5 },
         ];
 
         let currentIndex = 0;
@@ -391,6 +387,7 @@
         }
 
         function firstSlide() {
+            isPlaying = false;
             toggleMusic();
             if (currentIndex < slides.length - 1) {
                 currentIndex++;
