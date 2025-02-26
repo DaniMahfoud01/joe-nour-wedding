@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-
     <title>Event Invitation</title>
     <style>
         /* 1) Allow the body to scroll vertically if needed.
@@ -219,39 +218,23 @@
             cursor: pointer;
         }
 
-        #search-input {
-            width: 90%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+        #guest-count {
+            display: none;
         }
 
-        #name-list {
-            list-style: none;
-            padding: 0;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        #name-list li {
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
-            cursor: pointer;
-        }
-
-        #name-list li:hover {
-            background-color: #f0f0f0;
+        #guest-number {
+            width: 80%;
+            margin-top: 10px;
         }
 
         #confirm-button {
             display: none;
             margin: 20px auto;
-            /* Centers the button */
+            /* centers the button */
             padding: 12px 20px;
             font-size: 1.2rem;
             background: #000;
-            /* Change color if needed */
+            /* change color if needed */
             color: white;
             border: none;
             border-radius: 5px;
@@ -348,47 +331,43 @@
                 <button>Confirm Attendance</button>
             </div>
         </div>
-        /* -------------------------------------------------------------------------- */
+    </div>
 
-        <!-- RSVP Modal -->
-        <div id="rsvp-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-btn" onclick="closeModal()">&times;</span>
-                <h2>Find Your Name</h2>
-                <input type="text" id="search-input" placeholder="Search your name..." oninput="filterNames()" />
-                <ul id="name-list"></ul>
+    <!-- RSVP Modal -->
+    <div id="rsvp-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <!-- We show the name or instructions here -->
+            <p>Confirm RSVP for <strong id="selected-name"></strong></p>
 
-                <!-- Guest Count Input -->
-                <div id="guest-count" style="display: none;">
-                    <p>Confirm RSVP for <strong id="selected-name"></strong></p>
-                    <p id="guest-limit"></p>
-                    <input type="number" id="guest-number" placeholder="Number of Guests" min="1" />
-                </div>
-
-                <!-- Centered Confirm Button -->
-                <button id="confirm-button" onclick="confirmRSVP()" style="display: none;">Confirm Attendance</button>
+            <!-- Guest Count Input -->
+            <div id="guest-count">
+                <p id="guest-limit"></p>
+                <input type="number" id="guest-number" placeholder="Number of Guests" min="1" />
             </div>
+
+            <!-- Centered Confirm Button -->
+            <button id="confirm-button" onclick="confirmRSVP()" style="display: none;">Confirm Attendance</button>
         </div>
-
-
-        /* -------------------------------------------------------------------------- */
-
     </div>
 
     <script>
         // Invitees list with max guests allowed
         const invitees = [
             { name: "John Doe", maxGuests: 0 },
+            { name: "Nour & Joe Mahfoud", maxGuests: 0 },
             { name: "Jane Smith", maxGuests: 2 },
             { name: "Emily Johnson", maxGuests: 4 },
             { name: "Michael Brown", maxGuests: 1 },
             { name: "Sarah Williams", maxGuests: 5 }
         ];
+
         let currentIndex = 0;
         const slides = document.querySelectorAll(".slide");
         const music = document.getElementById("background-music");
         const musicButton = document.getElementById("music-button");
         let isPlaying = false;
+        let selectedInvitee = null;
 
         window.addEventListener("touchstart", handleTouchStart, false);
         window.addEventListener("touchmove", handleTouchMove, false);
@@ -449,95 +428,183 @@
             }
             isPlaying = !isPlaying;
         }
-        /* -------------------------------------------------------------------------- */
+
+        // --------------------------------------------------------------------------
         // Open the modal when the RSVP button is clicked
         document.querySelector("#rsvp button").addEventListener("click", openModal);
 
         function openModal() {
+            // If we already found a valid guest from the URL, show them
+            if (selectedInvitee) {
+                showGuest(selectedInvitee);
+            }
             document.getElementById("rsvp-modal").style.display = "flex";
         }
 
         function closeModal() {
             document.getElementById("rsvp-modal").style.display = "none";
-            document.getElementById("search-input").value = "";
-            document.getElementById("name-list").innerHTML = ""; // Clear the list
-            document.getElementById("guest-count").style.display = "none"; // Hide guest input
             selectedInvitee = null;
         }
 
-        // Search functionality
-        function filterNames() {
-            let input = document.getElementById("search-input").value.toLowerCase();
-            let nameList = document.getElementById("name-list");
-            nameList.innerHTML = ""; // Clear previous results
-
-            if (input === "") {
-                nameList.style.display = "none"; // Hide list if input is empty
-                return;
-            }
-
-            let filteredNames = invitees.filter(invitee => invitee.name.toLowerCase() === input.toLowerCase());
-
-            if (filteredNames.length > 0) {
-                nameList.style.display = "block";
-                filteredNames.forEach(invitee => {
-                    let li = document.createElement("li");
-                    li.textContent = invitee.name;
-                    li.onclick = () => showGuestInput(invitee);
-                    nameList.appendChild(li);
-                });
-            } else {
-                nameList.style.display = "none";
-            }
-        }
-
-        // Display guest input field after selecting a name
-        function showGuestInput(invitee) {
+        // Show the chosen guest's info in the modal
+        function showGuest(invitee) {
             selectedInvitee = invitee;
             document.getElementById("selected-name").textContent = invitee.name;
 
-            if (invitee.maxGuests === 0) {
-                document.getElementById("guest-count").style.display = "none"; // Hide guest input
-                document.getElementById("confirm-button").style.display = "block"; // Show confirm button
-            } else {
+            // If maxGuests > 0, show the number field
+            if (invitee.maxGuests > 0) {
                 document.getElementById("guest-count").style.display = "block";
-                document.getElementById("guest-number").value = 1; // Default to 1 guest
-                document.getElementById("guest-number").max = invitee.maxGuests; // Set max value
-                document.getElementById("guest-limit").textContent = `Max: ${invitee.maxGuests} guests`;
-                document.getElementById("confirm-button").style.display = "block"; // Show confirm button
-
+                document.getElementById("guest-number").value = 1; // default
+                document.getElementById("guest-number").max = invitee.maxGuests;
+                document.getElementById("guest-limit").textContent =
+                    `Max: ${invitee.maxGuests} guests`;
+            } else {
+                document.getElementById("guest-count").style.display = "none";
             }
+
+            // Show confirm button
+            document.getElementById("confirm-button").style.display = "block";
         }
 
-        // Confirm RSVP when a name is clicked
-        function confirmRSVP(name) {
-            const rsvpResponse = "Confirmed";
+        // Confirm RSVP when user clicks the confirm button
+        function confirmRSVP() {
             if (!selectedInvitee) return;
 
-            let guestCount = parseInt(document.getElementById("guest-number").value, 10);
-
-            if (selectedInvitee.maxGuests > 0 && (!guestCount || guestCount <= 0 || guestCount > selectedInvitee.maxGuests)) {
-                alert(`Please enter a valid number of guests (Max: ${selectedInvitee.maxGuests}).`);
-                return;
+            const rsvpResponse = "Confirmed";
+            let guestCount = 0;
+            // If we allow guests, read the number input
+            if (selectedInvitee.maxGuests > 0) {
+                guestCount = parseInt(document.getElementById("guest-number").value, 10);
+                if (
+                    !guestCount ||
+                    guestCount <= 0 ||
+                    guestCount > selectedInvitee.maxGuests
+                ) {
+                    alert(`Please enter a valid number of guests (Max: ${selectedInvitee.maxGuests}).`);
+                    return;
+                }
             }
 
+            // Send RSVP to Google Apps Script
             fetch("https://script.google.com/macros/s/AKfycbwJs6BmCqvUQLJ9shyT1k3XDR4CqETkRL2fKNmqjGV95gdt77Pb-GVv8gRENFHFCy8/exec", {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: selectedInvitee.name, response: rsvpResponse, guestCount: guestCount })
+                body: JSON.stringify({
+                    name: selectedInvitee.name,
+                    response: rsvpResponse,
+                    guestCount: guestCount
+                })
             });
 
-            let message = guestCount > 0
+            const message = guestCount > 0
                 ? `RSVP confirmed for ${selectedInvitee.name} with ${guestCount} guests.`
                 : `RSVP confirmed for ${selectedInvitee.name}.`;
 
             alert(message);
-
             closeModal();
         }
 
-        /* -------------------------------------------------------------------------- */
+        // --------------------------------------------------------------------------
+        // Function to decode the invitee's name (Shift by 3 approach)
+        function decodeName(encodedName) {
+            return encodedName
+                .split('')
+                .map(char =>
+                    String.fromCharCode(((char.charCodeAt(0) - 3 - 32 + 95) % 95) + 32)
+                )
+                .join('');
+        }
+
+        // Properly extract the "key" parameter from the full URL
+        const urlParams = new URLSearchParams(window.location.search);
+        let encodedKey = urlParams.get("key");
+
+        // Ensure we properly decode the full encoded string
+        if (encodedKey) {
+            encodedKey = decodeURIComponent(encodedKey); // Decode URL encoding
+            const guestName = decodeName(encodedKey);
+            console.log("Decoded guest name:", guestName);
+
+            // Find the matching invitee in the list
+            const foundInvitee = invitees.find(inv => inv.name === guestName);
+            if (foundInvitee) {
+                // Store it so it can be used when opening the RSVP modal
+                selectedInvitee = foundInvitee;
+            } else {
+                showErrorScreen(); // Show contact options instead of an alert
+            }
+        } else {
+            showErrorScreen(); // If there's no key, show the contact options
+        }
+        // Function to show the "Invalid Link" error screen
+        function showErrorScreen() {
+            document.body.innerHTML = `
+        <div class="background-wrapper">
+            <video class="background-video" autoplay loop muted playsinline>
+                <source src="background.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            <div class="background-overlay"></div>
+        </div>
+        <div class="error-screen">
+            <div class="error-content">
+                <h1>Oops! This link is invalid.</h1>
+                <p>Please contact us for assistance.</p>
+                <div class="buttons">
+                    <a href="https://wa.me/+96170342140?text=Hello%2C%20I%20need%20help%20with%20my%20invitation%20link." class="contact-btn">Contact Joe</a>
+                    <a href="https://wa.me/+96176349977?text=Hello%2C%20I%20need%20help%20with%20my%20invitation%20link." class="contact-btn">Contact Nour</a>
+                </div>
+            </div>
+        </div>
+    `;
+
+            // Apply styling for the error screen
+            const style = document.createElement("style");
+            style.innerHTML = `
+        .error-screen {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+        }
+
+        .error-content {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Adds space between buttons */
+            align-items: center;
+        }
+
+        .contact-btn {
+            width: 100%; /* Make buttons full width */
+            max-width: 250px; /* Prevent too wide buttons */
+            text-align: center;
+            padding: 12px 20px;
+            font-size: 1.2rem;
+            background: white; /* Match confirm button */
+            color: black;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.3s, color 0.3s;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    `;
+            document.head.appendChild(style);
+        }
 
     </script>
 </body>
