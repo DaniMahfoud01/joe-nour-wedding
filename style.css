@@ -97,7 +97,7 @@
   }
 
   .slide-special {
-    padding-top: 50% !important;
+    padding-top: 30% !important;
     justify-content: start !important;
   }
   
@@ -489,7 +489,7 @@
     display: flex;               /* horizontal layout */
     justify-content: center;     /* centers all items horizontally */
     align-items: center;         /* vertically centers them within the row */
-    gap: 2rem;                   /* space between columns */
+    gap: 1rem;                   /* space between columns */
     margin-top: 3rem;
     margin-bottom: 3rem;
     font-size: large;
@@ -497,7 +497,7 @@
   }
   
   .parents-column {
-    font-size: 15px;
+    font-size: 18px;
     display: flex;
     flex-direction: column;      /* stack the two name lines */
     text-align: center;
