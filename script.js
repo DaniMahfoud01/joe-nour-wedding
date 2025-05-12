@@ -1,35 +1,49 @@
-let invitees = []; // Empty list until data is fetched
-
-async function fetchInvitees() {
-    try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbzK6rRX4D3In_NCqef8zAXCbrRz8iIWOOpqPkjn52Varb7blviLQfY2jfr-rhmEveo/exec");
-        invitees = await response.json();
-        console.log("Invitees loaded:", invitees);
-
-        // Now that the invitees are loaded, check if the guest is valid
-        checkGuestFromURL();
-    } catch (error) {
-        console.error("Error fetching invitees:", error);
-        showErrorScreen(); // If fetching fails, show the error screen
-    }
-}
-
-
-// Fetch invitees on page load
-fetchInvitees();
-
-
+let xDown = null;
+let invitees = [];
 let currentIndex = 0;
+let isPlaying = false;
+let selectedInvitee = null;
 const slides = document.querySelectorAll(".slide");
 const music = document.getElementById("background-music");
 const musicButton = document.getElementById("music-button");
-let isPlaying = false;
-let selectedInvitee = null;
+const weddingDate = new Date("July 19, 2025 18:00:00").getTime();
 
-window.addEventListener("touchstart", handleTouchStart, false);
+const parts = [
+    "aHR0cHM6Ly9zY3JpcHQu",
+    "Z29vZ2xlLmNvbS9tYWNyb3M",
+    "vcy9BS2Z5Y2J6SzZyUlg0RDNJbl9OQ3FlZjh6",
+    "QVhDYnJSejhpSVdPT3BxUGtqbjUyVmFyYjdibHZpTFFmWTJq",
+    "ZnItcmhtRXZlby9leGVjIg=="
+];
+
+const ShParts = [parts[3], parts[0], parts[4], parts[1], parts[2]];
+const CoOrParts = [ShParts[1], ShParts[3], ShParts[4], ShParts[0], ShParts[2]];
+const fuEnParts = CoOrParts.join("");
+const aU = atob(fuEnParts);
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Only start countdown if the link is valid, i.e. after hideLoadingScreen() is called
+    // so that #countdown-timer is visible in the DOM.
+    startCountdown();
+    startCountdownSticky();
+});
+document.querySelector("#rsvp button").addEventListener("click", openModal);
+
 window.addEventListener("touchmove", handleTouchMove, false);
+window.addEventListener("touchstart", handleTouchStart, false);
 
-let xDown = null;
+fetchInvitees();
+
+async function fetchInvitees() {
+    try {
+        const response = await fetch(aU.replace(/"$/, ""));
+        invitees = await response.json();
+        checkGuestFromURL();
+    } catch (error) {
+        console.error("Error fetching invitees:", error);
+        showErrorScreen();
+    }
+}
 
 function handleTouchStart(evt) {
     xDown = evt.touches[0].clientX;
@@ -53,14 +67,18 @@ function handleTouchMove(evt) {
     xDown = null;
 }
 
-
 function firstSlide() {
+    music.play();
     isPlaying = false;
     toggleMusic();
     nextSlide();
 }
 
 function nextSlide() {
+    if (currentIndex === 0) {
+        isPlaying = false;
+        toggleMusic();
+    }
     if (currentIndex < slides.length - 1) {
         currentIndex++;
         updateSlidePosition();
@@ -78,6 +96,13 @@ function updateSlidePosition() {
     slides.forEach((slide, index) => {
         slide.style.transform = `translateX(-${currentIndex * 100}vw)`;
     });
+    // Show countdown ONLY if it's NOT the first slide
+    const countdown = document.getElementById("sticky-countdown");
+    if (currentIndex > 1) {
+        countdown.style.display = "block"; // Show countdown
+    } else {
+        countdown.style.display = "none";  // Hide countdown
+    }
 }
 
 function toggleMusic() {
@@ -91,9 +116,9 @@ function toggleMusic() {
     isPlaying = !isPlaying;
 }
 
-// --------------------------------------------------------------------------
-// Open the modal when the RSVP button is clicked
-document.querySelector("#rsvp button").addEventListener("click", openModal);
+function toggleMusicInitial() {
+    music.play();
+}
 
 function openModal() {
     // If we already found a valid guest from the URL, show them
@@ -107,7 +132,6 @@ function closeModal() {
     document.getElementById("rsvp-modal").style.display = "none";
 }
 
-// Show the chosen guest's info in the modal
 function showGuest(invitee) {
     selectedInvitee = invitee;
     document.getElementById("selected-name").textContent = invitee.name;
@@ -115,10 +139,10 @@ function showGuest(invitee) {
     // If maxGuests > 0, show the number field
     if (invitee.maxGuests > 0) {
         document.getElementById("guest-count").style.display = "block";
-        document.getElementById("guest-number").value = 1; // default
+        document.getElementById("guest-number").value = invitee.maxGuests; // default
         document.getElementById("guest-number").max = invitee.maxGuests;
         document.getElementById("guest-limit").textContent =
-            `Max: ${invitee.maxGuests} guests`;
+            `${invitee.maxGuests} guests`;
     } else {
         document.getElementById("guest-count").style.display = "none";
     }
@@ -127,7 +151,6 @@ function showGuest(invitee) {
     document.getElementById("confirm-button").style.display = "block";
 }
 
-// Confirm RSVP when user clicks the confirm button
 function confirmRSVP() {
     if (!selectedInvitee) return;
 
@@ -144,9 +167,9 @@ function confirmRSVP() {
     }
 
     // Send RSVP Data
-    fetch("https://script.google.com/macros/s/AKfycbzK6rRX4D3In_NCqef8zAXCbrRz8iIWOOpqPkjn52Varb7blviLQfY2jfr-rhmEveo/exec", {
+    fetch(aU.replace(/"$/, ""), {
         method: "POST",
-        mode:"no-cors",
+        mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             name: selectedInvitee.name,
@@ -156,9 +179,8 @@ function confirmRSVP() {
     });
 
     // Custom popup message
-    const message = guestCount > 0
-        ? `RSVP confirmed for ${selectedInvitee.name} with ${guestCount} guests.`
-        : `RSVP confirmed for ${selectedInvitee.name}.`;
+    const message = `Thank you for your confirmation!<br>We can't wait to celebrate with you ♡`;
+
 
     showConfirmationPopup(message);
     closeModal(); // Close RSVP input modal
@@ -168,7 +190,7 @@ function showConfirmationPopup(message, isError = false) {
     const modal = document.getElementById("rsvp-confirm-modal");
     const messageElement = document.getElementById("confirmation-message");
 
-    messageElement.textContent = message;
+    messageElement.innerHTML = message;
 
     // Change color for errors (optional)
     messageElement.style.color = isError ? "red" : "black";
@@ -176,14 +198,10 @@ function showConfirmationPopup(message, isError = false) {
     modal.style.display = "flex"; // Show modal
 }
 
-// Function to close the popup
 function closeConfirmationModal() {
     document.getElementById("rsvp-confirm-modal").style.display = "none";
 }
 
-
-// --------------------------------------------------------------------------
-// Function to decode the invitee's name (Shift by 3 approach)
 function decodeName(encodedName) {
     return encodedName
         .split('')
@@ -200,7 +218,6 @@ function checkGuestFromURL() {
     if (encodedKey) {
         encodedKey = decodeURIComponent(encodedKey);
         const guestName = decodeName(encodedKey);
-        console.log("Decoded guest name:", guestName);
 
         const foundInvitee = invitees.find(inv => inv.name === guestName);
         if (foundInvitee) {
@@ -223,30 +240,6 @@ function hideLoadingScreen() {
     }, 500);
 }
 
-
-// // Properly extract the "key" parameter from the full URL
-// const urlParams = new URLSearchParams(window.location.search);
-// let encodedKey = urlParams.get("key");
-
-// // Ensure we properly decode the full encoded string
-// if (encodedKey) {
-//     encodedKey = decodeURIComponent(encodedKey); // Decode URL encoding
-//     const guestName = decodeName(encodedKey);
-//     console.log("Decoded guest name:", guestName);
-
-//     // Find the matching invitee in the list
-//     const foundInvitee = invitees.find(inv => inv.name === guestName);
-//     if (foundInvitee) {
-//         // Store it so it can be used when opening the RSVP modal
-//         selectedInvitee = foundInvitee;
-//     } else {
-//         showErrorScreen(); // Show contact options instead of an alert
-//     }
-// } else {
-//     showErrorScreen(); // If there's no key, show the contact options
-// }
-
-// Function to show the "Invalid Link" error screen
 function showErrorScreen() {
     document.body.innerHTML = `
       <div class="background-wrapper">
@@ -333,4 +326,68 @@ function increaseGuest() {
     if (currentValue < maxGuests) {
         guestInput.value = currentValue + 1;
     }
+}
+
+function startCountdown() {
+    const countdownTimerElem = document.getElementById("countdown-timer");
+
+    // Update every second
+    const timerInterval = setInterval(() => {
+        const now = new Date().getTime();
+        const distance = weddingDate - now;
+
+        if (distance <= 0) {
+            // If the countdown is finished, stop updating
+            clearInterval(timerInterval);
+            countdownTimerElem.textContent = "It's happening now!";
+            return;
+        }
+
+        // Calculate days, hours, minutes, seconds
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        // Display the result
+        countdownTimerElem.innerHTML = `
+        <div><strong>${days}</strong><br>Days</div>
+        <div><strong>${hours}</strong><br>Hours</div>
+        <div><strong>${minutes}</strong><br>Min</div>
+        <div><strong>${seconds}</strong><br>Sec</div>
+      `;
+    }, 1000);
+}
+function startCountdownSticky() {
+    const countdownTimerElem = document.getElementById("countdown-timer-sticky");
+
+    setInterval(() => {
+        const now = new Date().getTime();
+        const distance = weddingDate - now;
+
+        if (distance <= 0) {
+            countdownTimerElem.innerHTML = "It's happening now!";
+            return;
+        }
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        countdownTimerElem.innerHTML = `<strong>${days}</strong> days <strong>${hours}</strong>h 
+                                        <strong>${minutes}</strong>m <strong>${seconds}</strong>s`;
+    }, 1000);
+}
+
+function startExperience() {
+    const overlay = document.getElementById("tap-to-start-overlay");
+    overlay.style.opacity = "0"; // Fade out effect
+    setTimeout(() => {
+        overlay.style.display = "none"; // Hide completely after fade
+    }, 500);
+
+    // Start music (if applicable)
+    toggleMusic();
+
 }
