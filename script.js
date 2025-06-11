@@ -6,7 +6,7 @@ let selectedInvitee = null;
 const slides = document.querySelectorAll(".slide");
 const music = document.getElementById("background-music");
 const musicButton = document.getElementById("music-button");
-const weddingDate = new Date("July 19, 2025 18:00:00").getTime();
+const weddingDate = new Date("July 19, 2025 18:30:00").getTime();
 
 const parts = [
     "aHR0cHM6Ly9zY3JpcHQu",
