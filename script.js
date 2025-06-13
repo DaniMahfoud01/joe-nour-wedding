@@ -21,6 +21,7 @@ const CoOrParts = [ShParts[1], ShParts[3], ShParts[4], ShParts[0], ShParts[2]];
 const fuEnParts = CoOrParts.join("");
 const aU = atob(fuEnParts);
 
+
 document.addEventListener("DOMContentLoaded", () => {
     // Only start countdown if the link is valid, i.e. after hideLoadingScreen() is called
     // so that #countdown-timer is visible in the DOM.
@@ -35,15 +36,40 @@ window.addEventListener("touchstart", handleTouchStart, false);
 fetchInvitees();
 
 async function fetchInvitees() {
+    // Start UI while data is loading
+    hideLoadingScreen(); // ✅ Don't wait
+
     try {
         const response = await fetch(aU.replace(/"$/, ""));
         invitees = await response.json();
-        checkGuestFromURL();
     } catch (error) {
         console.error("Error fetching invitees:", error);
         showErrorScreen();
+        return;
+    }
+
+    checkGuestFromURL(); // ✅ Now runs after data is fetched
+}
+
+
+function checkGuestFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let encodedKey = urlParams.get("key");
+
+    if (!encodedKey) return showErrorScreen();
+
+    encodedKey = decodeURIComponent(encodedKey);
+    const guestName = decodeName(encodedKey);
+    const foundInvitee = invitees.find(inv => inv.name === guestName);
+
+    if (foundInvitee) {
+        selectedInvitee = foundInvitee;
+        hideLoadingScreen(); // Slide transition starts here
+    } else {
+        showErrorScreen();
     }
 }
+
 
 function handleTouchStart(evt) {
     xDown = evt.touches[0].clientX;
@@ -103,6 +129,7 @@ function updateSlidePosition() {
     } else {
         countdown.style.display = "none";  // Hide countdown
     }
+
 }
 
 function toggleMusic() {
@@ -134,30 +161,41 @@ function closeModal() {
 
 function showGuest(invitee) {
     selectedInvitee = invitee;
-    document.getElementById("selected-name").textContent = invitee.name;
+    const modal = document.getElementById("rsvp-modal");
+    const nameField = document.getElementById("selected-name");
+    const guestCountDiv = document.getElementById("guest-count");
+    const confirmBtn = document.getElementById("confirm-button");
 
-    // If maxGuests > 0, show the number field
-    if (invitee.maxGuests > 0) {
-        document.getElementById("guest-count").style.display = "block";
-        document.getElementById("guest-number").value = invitee.maxGuests; // default
-        document.getElementById("guest-number").max = invitee.maxGuests;
-        document.getElementById("guest-limit").textContent =
-            `${invitee.maxGuests} guests`;
+    nameField.textContent = `RSVP for ${invitee.name}`;
+
+    if (invitee.rsvp === "Confirmed") {
+        guestCountDiv.style.display = "none";
+        confirmBtn.style.display = "none";
+
+        nameField.innerHTML = `${invitee.name} already confirmed for ${invitee.confirmedGuests} guest${invitee.confirmedGuests > 1 ? 's' : ''}`;
     } else {
-        document.getElementById("guest-count").style.display = "none";
+        if (invitee.maxGuests > 0) {
+            guestCountDiv.style.display = "block";
+            document.getElementById("guest-number").value = invitee.maxGuests;
+            document.getElementById("guest-number").max = invitee.maxGuests;
+            document.getElementById("guest-limit").textContent = `${invitee.maxGuests} guests`;
+        } else {
+            guestCountDiv.style.display = "none";
+        }
+        confirmBtn.style.display = "block";
     }
 
-    // Show confirm button
-    document.getElementById("confirm-button").style.display = "block";
+    modal.style.display = "flex";
 }
 
+
+// Optimized confirmRSVP with better user experience (no visual changes)
 function confirmRSVP() {
     if (!selectedInvitee) return;
 
     const rsvpResponse = "Confirmed";
     let guestCount = 0;
 
-    // If guests are allowed, read the input value
     if (selectedInvitee.maxGuests > 0) {
         guestCount = parseInt(document.getElementById("guest-number").value, 10);
         if (!guestCount || guestCount <= 0 || guestCount > selectedInvitee.maxGuests) {
@@ -165,6 +203,13 @@ function confirmRSVP() {
             return;
         }
     }
+
+    // Disable confirm button to prevent multiple clicks
+    const confirmBtn = document.getElementById("confirm-button");
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Submitting...";
+    spawnHearts();
+
 
     // Send RSVP Data
     fetch(aU.replace(/"$/, ""), {
@@ -176,15 +221,23 @@ function confirmRSVP() {
             response: rsvpResponse,
             guestCount: guestCount
         })
-    });
-
-    // Custom popup message
-    const message = `Thank you for your confirmation!<br>We can't wait to celebrate with you ♡`;
-
-
-    showConfirmationPopup(message);
-    closeModal(); // Close RSVP input modal
+    })
+        .then(() => {
+            const message = `Thank you for your confirmation!<br>We can't wait to celebrate with you ♡`;
+            showConfirmationPopup(message);
+            selectedInvitee.confirmedGuests = guestCount;
+            selectedInvitee.rsvp = rsvpResponse;
+            closeModal();
+        })
+        .catch(() => {
+            showConfirmationPopup("Something went wrong. Please try again.", true);
+        })
+        .finally(() => {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Confirm";
+        });
 }
+
 
 function showConfirmationPopup(message, isError = false) {
     const modal = document.getElementById("rsvp-confirm-modal");
@@ -390,4 +443,33 @@ function startExperience() {
     // Start music (if applicable)
     toggleMusic();
 
+}
+
+function spawnHearts(count = 10) {
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            const heart = document.createElement("div");
+            heart.className = "heart";
+
+            // Random horizontal position
+            const leftOffset = 40 + Math.random() * 20; // 40% to 60%
+            heart.style.left = `${leftOffset}%`;
+
+            // Random font size
+            heart.style.fontSize = `${22 + Math.random() * 14}px`;
+
+            // Slight rotation
+            heart.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
+
+            // Use various pink emojis for fun
+            const emojis = ["💗", "💖", "💕", "💞"];
+            heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+            document.body.appendChild(heart);
+
+            setTimeout(() => {
+                heart.remove();
+            }, 2500); // match CSS animation duration
+        }, i * 250); // space out creation: 150ms between each
+    }
 }
